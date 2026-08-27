@@ -48,6 +48,7 @@ export function createApp({
   app.get('/health', (_req, res) => {
     res.json({ data: { status: 'ok' } });
   });
+
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
   app.use(
     '/auth',

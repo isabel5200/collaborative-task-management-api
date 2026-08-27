@@ -12,6 +12,7 @@ export function authenticate(pool, jwtConfig) {
 
     const token = authorization.slice('Bearer '.length).trim();
     let payload;
+
     try {
       payload = jwt.verify(token, jwtConfig.secret);
     } catch {
@@ -24,6 +25,7 @@ export function authenticate(pool, jwtConfig) {
     }
 
     req.user = user;
+
     next();
   });
 }
@@ -33,6 +35,7 @@ export function requireRole(...allowedRoles) {
     if (!allowedRoles.includes(req.user.role)) {
       return next(new AppError(403, 'FORBIDDEN', 'You do not have permission for this action.'));
     }
+
     return next();
   };
 }

@@ -6,6 +6,7 @@ export async function findByEmail(executor, email) {
      WHERE u.email = ?`,
     [email],
   );
+
   return rows[0] ?? null;
 }
 
