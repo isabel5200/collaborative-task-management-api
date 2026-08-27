@@ -89,11 +89,9 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     requireRole('ADMIN'),
     validate({ params: taskIdParamsSchema }),
     asyncHandler(async (req, res) => {
-      res.json({
-        data: {
-          notifications: await taskService.listNotifications(pool, req.validated.params.idTask),
-        },
-      });
+      const notifications = await taskService.listNotifications(pool, req.validated.params.idTask);
+
+      res.status(200).json({ data: notifications });
     }),
   );
 
