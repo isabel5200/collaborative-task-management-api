@@ -40,14 +40,14 @@ export function createTaskService(notificationService) {
   async function createTask(executor, input, creatorId) {
     if (input.userIds) await assertAssignableMembers(executor, input.userIds);
 
-    const statusId = await taskRepository.findStatusId(executor, 'open');
     const taskId = await taskRepository.create(executor, {
       title: input.title,
       description: input.description,
-      statusId,
       createdByUserId: creatorId,
     });
+
     if (input.userIds) await taskRepository.addAssignments(executor, taskId, input.userIds);
+
     return loadTask(executor, taskId);
   }
 
@@ -89,15 +89,18 @@ export function createTaskService(notificationService) {
     }
 
     const lockedTask = await taskRepository.lockTask(executor, taskId);
+
     if (!lockedTask) throw new AppError(404, 'TASK_NOT_FOUND', 'Task was not found.');
 
     const assignment = await taskRepository.lockAssignment(executor, taskId, authenticatedUserId);
+
     if (!assignment) {
       throw new AppError(404, 'ASSIGNMENT_NOT_FOUND', 'You are not assigned to this task.');
     }
 
     if (assignment.completedAt) {
       const task = await loadTask(executor, taskId);
+
       return {
         result: {
           taskId,
@@ -152,10 +155,12 @@ export function createTaskService(notificationService) {
 
   async function listTasks(executor, status) {
     const tasks = await taskRepository.listTasks(executor, status);
+
     const assignments = await taskRepository.findAssignments(
       executor,
       tasks.map((task) => task.id),
     );
+
     return tasks.map((task) =>
       serializeTask(
         task,

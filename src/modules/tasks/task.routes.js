@@ -3,30 +3,39 @@ import { asyncHandler } from '../../common/async-handler.js';
 import { requireRole } from '../../middlewares/auth.js';
 import { validate } from '../../middlewares/validate.js';
 import {
-  // assignTaskBodySchema,
-  // completeTaskBodySchema,
-  // createTaskBodySchema,
+  assignTaskBodySchema,
+  completeTaskBodySchema,
+  createTaskBodySchema,
   listTasksQuerySchema,
   taskIdParamsSchema,
 } from './task.schemas.js';
+import { withTransaction } from '../../config/database.js';
 
 export function createTaskRouter({ pool, authenticate, taskService }) {
   const router = Router();
   router.use(authenticate);
 
-  // router.post(
-  //   '/',
-  //   requireRole('ADMIN'),
-  //   validate({ body: createTaskBodySchema }), async (req, res) => ({
-  //     status: 201,
-  //     body: {
-  //       message: 'Task created successfully.',
-  //       data: {
-  //         task: await taskService.createTask(pool, req.validated.body, req.user.id),
-  //       },
-  //     },
-  //   })),
-  // );
+  router.post(
+    '/',
+    requireRole('ADMIN'),
+    validate({ body: createTaskBodySchema }),
+    async (req, res) => {
+      const task = await withTransaction(
+        pool,
+        (connection) =>
+          taskService.createTask(
+            connection,
+            req.validated.body,
+            req.user.id
+          )
+      );
+
+      return res.status(201).json({
+        message: 'Task created successfully.',
+        data: { task },
+      });
+    }
+  );
 
   router.get(
     '/',
@@ -39,48 +48,45 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     }),
   );
 
-  // router.post(
-  //   '/:idTask/assign',
-  //   requireRole('ADMIN'),
-  //   validate({ params: taskIdParamsSchema, body: assignTaskBodySchema }),
-  //   idempotentPost(pool, async (req, connection) => ({
-  //     status: 200,
-  //     body: {
-  //       message: 'Users assigned successfully.',
-  //       data: {
-  //         task: await taskService.assignTask(
-  //           connection,
-  //           req.validated.params.idTask,
-  //           req.validated.body.userIds,
-  //         ),
-  //       },
-  //     },
-  //   })),
-  // );
+  router.post(
+    '/:idTask/assign',
+    requireRole('ADMIN'),
+    validate({ params: taskIdParamsSchema, body: assignTaskBodySchema }),
+    async (req, res) => {
+      const taskAssign = await taskService.assignTask(
+        pool,
+        req.validated.params.idTask,
+        req.validated.body.userIds
+      );
 
-  // router.post(
-  //   '/:idTask/complete',
-  //   requireRole('MEMBER'),
-  //   validate({ params: taskIdParamsSchema, body: completeTaskBodySchema }),
-  //   idempotentPost(pool, async (req, connection) => {
-  //     const completion = await taskService.completeTask(
-  //       connection,
-  //       req.validated.params.idTask,
-  //       req.user.id,
-  //       req.validated.body.userId,
-  //     );
-  //     return {
-  //       status: 200,
-  //       body: {
-  //         message: completion.result.alreadyCompleted
-  //           ? 'Assignment was already completed.'
-  //           : 'Assignment completed successfully.',
-  //         data: completion.result,
-  //       },
-  //       afterCommit: completion.afterCommit,
-  //     };
-  //   }),
-  // );
+      return res.status(200).json({
+        message: 'Users assigned successfully.',
+        data: { taskAssign }
+      });
+    },
+  );
+
+  router.post(
+    '/:idTask/complete',
+    requireRole('MEMBER'),
+    validate({ params: taskIdParamsSchema, body: completeTaskBodySchema }),
+    async (req, res) => {
+      const completion = await taskService.completeTask(
+        pool,
+        req.validated.params.idTask,
+        req.user.id,
+        req.validated.body.userId,
+      );
+
+      return res.status(200).json({
+        message: completion.result.alreadyCompleted
+          ? 'Assignment was already completed.'
+          : 'Assignment completed successfully.',
+        data: completion.result,
+        afterCommit: completion.afterCommit,
+      });
+    }
+  );
 
   router.get(
     '/:idTask/notifications',

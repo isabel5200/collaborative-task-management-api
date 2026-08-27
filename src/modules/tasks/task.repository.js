@@ -5,10 +5,11 @@ export async function findStatusId(executor, code) {
 
 export async function create(executor, task) {
   const [result] = await executor.execute(
-    `INSERT INTO tasks (title, description, task_status_id, created_by_user_id)
-     VALUES (?, ?, ?, ?)`,
-    [task.title, task.description ?? null, task.statusId, task.createdByUserId],
+    `INSERT INTO tasks (title, description, created_by_user_id)
+     VALUES (?, ?, ?)`,
+    [task.title, task.description ?? null, task.createdByUserId],
   );
+
   return result.insertId;
 }
 
@@ -19,6 +20,7 @@ export async function lockTask(executor, taskId) {
      WHERE t.id = ? FOR UPDATE`,
     [taskId],
   );
+
   return rows[0] ?? null;
 }
 
@@ -35,6 +37,7 @@ export async function findExistingAssignmentIds(executor, taskId, userIds) {
 export async function addAssignments(executor, taskId, userIds) {
   const values = userIds.map(() => '(?, ?)').join(', ');
   const parameters = userIds.flatMap((userId) => [taskId, userId]);
+
   await executor.execute(
     `INSERT INTO task_assignments (task_id, user_id) VALUES ${values}`,
     parameters,
@@ -55,6 +58,7 @@ export async function findTask(executor, taskId) {
 
 export async function findAssignments(executor, taskIds) {
   if (taskIds.length === 0) return [];
+
   const placeholders = taskIds.map(() => '?').join(', ');
   const [rows] = await executor.execute(
     `SELECT ta.task_id AS taskId, u.id AS userId, u.name, u.last_name AS lastName, u.email,
@@ -64,6 +68,7 @@ export async function findAssignments(executor, taskIds) {
      ORDER BY ta.task_id, u.id`,
     taskIds,
   );
+
   return rows;
 }
 

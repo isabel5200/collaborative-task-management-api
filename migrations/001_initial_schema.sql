@@ -34,7 +34,7 @@ CREATE TABLE
     id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(100) NOT NULL,
     description TEXT NULL,
-    task_status_id INT UNSIGNED NOT NULL,
+    task_status_id INT UNSIGNED NOT NULL DEFAULT 1,
     created_by_user_id INT UNSIGNED NOT NULL,
     archived_at TIMESTAMP(3) NULL,
     created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
