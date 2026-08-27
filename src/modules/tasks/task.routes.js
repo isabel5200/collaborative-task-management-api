@@ -106,8 +106,11 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     validate({ params: taskIdParamsSchema }),
     asyncHandler(async (req, res) => {
       const { idTask } = req.validated.params;
+      const task = await taskService.getTask(pool, idTask);
+
       await taskService.assertTaskAccess(pool, idTask, req.user);
-      res.json({ data: { task: await taskService.getTask(pool, idTask) } });
+
+      res.status(200).json({ data: task });
     }),
   );
 
