@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+.test-mysql/
+.env
+.env.*
+!.env.example
+!.env.test.example
+npm-debug.log*
+*.log
+.DS_Store
+REQUIREMENTS.md
+collab_task_manager.sql

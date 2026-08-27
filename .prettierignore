@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+package-lock.json
+.env.example
+.env.test.example
+REQUIREMENTS.md
+database.dbml
+collab_task_manager.sql
+migrations/*.sql

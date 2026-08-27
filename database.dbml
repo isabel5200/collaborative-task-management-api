@@ -1,0 +1,100 @@
+Table users {
+  id int [pk, increment]
+  role_id smallint [not null]
+  name varchar(80) [not null]
+  last_name varchar(100) [not null]
+  email varchar(254) [not null, unique]
+  password_hash varchar(255) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'Updated automatically by MySQL']
+}
+
+Table roles {
+  id smallint [pk, increment]
+  code varchar(30) [not null, unique]
+  name varchar(50) [not null]
+}
+
+Table task_statuses {
+  id int [pk, increment]
+  code varchar(30) [not null, unique]
+  name varchar(50) [not null]
+}
+
+Table tasks {
+  id int [pk, increment]
+  title varchar(100) [not null]
+  description text
+  task_status_id int [not null]
+  created_by_user_id int [not null]
+  archived_at timestamp
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'Updated automatically by MySQL']
+}
+
+Table task_assignments {
+  id int [pk, increment]
+  task_id int [not null]
+  user_id int [not null]
+  assigned_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  completed_at timestamp
+
+  indexes {
+    (task_id, user_id) [unique]
+    user_id
+    (task_id, completed_at)
+  }
+}
+
+Table task_notifications {
+  id bigint [pk, increment]
+  task_id int [not null, unique]
+  status varchar(20) [not null, default: 'pending']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  delivered_at timestamp
+}
+
+Table notification_attempts {
+  id bigint [pk, increment]
+  notification_id bigint [not null]
+  attempt_number smallint [not null]
+  attempted_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  http_status smallint
+  error_message varchar(500)
+
+  indexes {
+    (notification_id, attempt_number) [unique]
+  }
+}
+
+Table idempotency_records {
+  id bigint [pk, increment]
+  idempotency_key varchar(255) [not null]
+  request_method varchar(10) [not null]
+  request_path varchar(255) [not null]
+  request_hash char(64) [not null]
+  state varchar(20) [not null]
+  response_status smallint
+  response_body json
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'Updated automatically by MySQL']
+
+  indexes {
+    (idempotency_key, request_method, request_path) [unique]
+  }
+}
+
+Table schema_migrations {
+  filename varchar(255) [pk]
+  checksum char(64) [not null]
+  applied_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Ref: users.role_id > roles.id [delete: restrict, update: restrict]
+Ref: tasks.task_status_id > task_statuses.id [delete: restrict, update: restrict]
+Ref: tasks.created_by_user_id > users.id [delete: restrict, update: restrict]
+Ref: task_assignments.task_id > tasks.id [delete: restrict, update: restrict]
+Ref: task_assignments.user_id > users.id [delete: restrict, update: restrict]
+Ref: task_notifications.task_id > tasks.id [delete: restrict, update: restrict]
+Ref: notification_attempts.notification_id > task_notifications.id [delete: restrict, update: restrict]

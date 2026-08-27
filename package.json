@@ -1,0 +1,44 @@
+{
+  "name": "collaborative-task-management-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REST API for collaborative task assignment, completion, archiving, and notifications.",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "webhook:mock": "node scripts/mock-webhook.js",
+    "db:create": "node scripts/create-database.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:setup": "node scripts/setup-database.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.3",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
+  }
+}
