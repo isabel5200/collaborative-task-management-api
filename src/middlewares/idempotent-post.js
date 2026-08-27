@@ -19,31 +19,33 @@ function canonicalize(value) {
         .map((key) => [key, canonicalize(value[key])]),
     );
   }
+
   return value;
 }
 
 function requestFingerprint(req) {
   const actor = req.user?.id ?? 'anonymous';
   const canonicalBody = JSON.stringify(canonicalize(req.validated?.body ?? req.body ?? {}));
+
   return createHash('sha256').update(`${actor}:${canonicalBody}`).digest('hex');
 }
 
 export function idempotentPost(pool, operation) {
   return asyncHandler(async (req, res) => {
     const rawKey = req.get('idempotency-key');
-    let key = null;
-
-    if (rawKey !== undefined) {
-      const parsedKey = keySchema.safeParse(rawKey);
-      if (!parsedKey.success) {
-        throw new AppError(
-          400,
-          'INVALID_IDEMPOTENCY_KEY',
-          'Idempotency-Key must contain 8 to 255 visible ASCII characters.',
-        );
-      }
-      key = parsedKey.data;
+    if (rawKey === undefined) {
+      throw new AppError(400, 'IDEMPOTENCY_KEY_REQUIRED', 'Idempotency-Key header is required.');
     }
+
+    const parsedKey = keySchema.safeParse(rawKey);
+    if (!parsedKey.success) {
+      throw new AppError(
+        400,
+        'INVALID_IDEMPOTENCY_KEY',
+        'Idempotency-Key must contain 8 to 255 visible ASCII characters.',
+      );
+    }
+    const key = parsedKey.data;
 
     const requestPath = req.originalUrl.split('?')[0];
     const requestHash = requestFingerprint(req);
@@ -118,7 +120,6 @@ export function idempotentPost(pool, operation) {
       try {
         await outcome.afterCommit();
       } catch (error) {
-        // The durable notification row remains queryable even if unexpected dispatch code fails.
         console.error(
           JSON.stringify({
             level: 'error',

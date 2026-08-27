@@ -186,7 +186,7 @@ export const openApiDocument = {
       IdempotencyKey: {
         name: 'Idempotency-Key',
         in: 'header',
-        required: false,
+        required: true,
         schema: { type: 'string', minLength: 8, maxLength: 255 },
       },
       UserId: {

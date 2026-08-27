@@ -35,11 +35,15 @@ function bearer(actor) {
   return `Bearer ${actor.token}`;
 }
 
+function idempotencyKey(prefix) {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
 async function createTask(admin, body) {
   return request(app)
     .post('/tasks')
     .set('Authorization', bearer(admin))
-    .set('Idempotency-Key', `create-${crypto.randomUUID()}`)
+    .set('Idempotency-Key', idempotencyKey('create'))
     .send(body);
 }
 
@@ -87,10 +91,32 @@ describe('Collaborative Task Management API', () => {
     const response = await request(app)
       .post('/tasks')
       .set('Authorization', bearer(member))
+      .set('Idempotency-Key', idempotencyKey('forbidden-task'))
       .send({ title: 'Forbidden task' });
 
     expect(response.status).toBe(403);
     expect(response.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('requires Idempotency-Key and does not modify state when it is missing', async () => {
+    const admin = await login('admin@example.com', 'Admin123!');
+    const before = await request(app).get('/tasks').set('Authorization', bearer(admin));
+
+    const response = await request(app)
+      .post('/tasks')
+      .set('Authorization', bearer(admin))
+      .send({ title: 'Must not be created' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: {
+        code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key header is required.',
+      },
+    });
+
+    const after = await request(app).get('/tasks').set('Authorization', bearer(admin));
+    expect(after.body.data.tasks).toEqual(before.body.data.tasks);
   });
 
   it('creates users with hashed credentials and rejects duplicate email', async () => {
@@ -105,6 +131,7 @@ describe('Collaborative Task Management API', () => {
     const created = await request(app)
       .post('/users')
       .set('Authorization', bearer(admin))
+      .set('Idempotency-Key', idempotencyKey('create-user'))
       .send(body);
 
     expect(created.status).toBe(201);
@@ -118,6 +145,7 @@ describe('Collaborative Task Management API', () => {
     const duplicate = await request(app)
       .post('/users')
       .set('Authorization', bearer(admin))
+      .set('Idempotency-Key', idempotencyKey('duplicate-user'))
       .send(body);
     expect(duplicate.status).toBe(409);
     expect(duplicate.body.error.code).toBe('DUPLICATE_EMAIL');
@@ -131,12 +159,12 @@ describe('Collaborative Task Management API', () => {
     const first = await request(app)
       .post(`/tasks/${taskId}/assign`)
       .set('Authorization', bearer(admin))
-      .set('Idempotency-Key', `assign-${crypto.randomUUID()}`)
+      .set('Idempotency-Key', idempotencyKey('assign'))
       .send({ userIds: [member1.user.id] });
     const duplicate = await request(app)
       .post(`/tasks/${taskId}/assign`)
       .set('Authorization', bearer(admin))
-      .set('Idempotency-Key', `assign-${crypto.randomUUID()}`)
+      .set('Idempotency-Key', idempotencyKey('assign-duplicate'))
       .send({ userIds: [member1.user.id, member2.user.id] });
 
     expect(first.status).toBe(200);
@@ -156,6 +184,7 @@ describe('Collaborative Task Management API', () => {
     const response = await request(app)
       .post(`/tasks/${task.body.data.task.id}/complete`)
       .set('Authorization', bearer(member1))
+      .set('Idempotency-Key', idempotencyKey('complete-other'))
       .send({ userId: member2.user.id });
     expect(response.status).toBe(403);
   });
@@ -171,6 +200,7 @@ describe('Collaborative Task Management API', () => {
     const first = await request(app)
       .post(`/tasks/${taskId}/complete`)
       .set('Authorization', bearer(member1))
+      .set('Idempotency-Key', idempotencyKey('complete-first'))
       .send({ userId: member1.user.id });
     expect(first.status).toBe(200);
     expect(first.body.data.taskStatus).toBe('open');
@@ -179,6 +209,7 @@ describe('Collaborative Task Management API', () => {
     const last = await request(app)
       .post(`/tasks/${taskId}/complete`)
       .set('Authorization', bearer(member2))
+      .set('Idempotency-Key', idempotencyKey('complete-last'))
       .send({ userId: member2.user.id });
     expect(last.status).toBe(200);
     expect(last.body.data.taskStatus).toBe('archived');
@@ -188,6 +219,7 @@ describe('Collaborative Task Management API', () => {
     const repeated = await request(app)
       .post(`/tasks/${taskId}/complete`)
       .set('Authorization', bearer(member2))
+      .set('Idempotency-Key', idempotencyKey('complete-repeat'))
       .send({ userId: member2.user.id });
     expect(repeated.status).toBe(200);
     expect(repeated.body.data.alreadyCompleted).toBe(true);
@@ -212,10 +244,12 @@ describe('Collaborative Task Management API', () => {
       request(app)
         .post(`/tasks/${taskId}/complete`)
         .set('Authorization', bearer(member1))
+        .set('Idempotency-Key', idempotencyKey('concurrent-member-1'))
         .send({ userId: member1.user.id }),
       request(app)
         .post(`/tasks/${taskId}/complete`)
         .set('Authorization', bearer(member2))
+        .set('Idempotency-Key', idempotencyKey('concurrent-member-2'))
         .send({ userId: member2.user.id }),
     ]);
 
@@ -296,6 +330,7 @@ describe('Collaborative Task Management API', () => {
     await request(app)
       .post(`/tasks/${taskId}/complete`)
       .set('Authorization', bearer(member1))
+      .set('Idempotency-Key', idempotencyKey('complete-retry'))
       .send({ userId: member1.user.id });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
