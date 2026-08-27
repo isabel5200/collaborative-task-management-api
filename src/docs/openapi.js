@@ -31,7 +31,6 @@ export const openApiDocument = {
       post: {
         tags: ['Authentication'],
         summary: 'Authenticate a user',
-        parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }],
         requestBody: {
           required: true,
           content: {

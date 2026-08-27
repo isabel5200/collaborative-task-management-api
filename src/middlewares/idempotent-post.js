@@ -32,6 +32,7 @@ export function idempotentPost(pool, operation) {
   return asyncHandler(async (req, res) => {
     const rawKey = req.get('idempotency-key');
     let key = null;
+
     if (rawKey !== undefined) {
       const parsedKey = keySchema.safeParse(rawKey);
       if (!parsedKey.success) {
@@ -71,6 +72,7 @@ export function idempotentPost(pool, operation) {
              FOR UPDATE`,
             [key, req.method, requestPath],
           );
+
           const record = records[0];
           if (!record || record.requestHash !== requestHash) {
             throw new AppError(
@@ -88,6 +90,7 @@ export function idempotentPost(pool, operation) {
           }
 
           await connection.commit();
+
           return res.status(record.responseStatus).json(record.responseBody);
         }
       }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/async-handler.js';
+import { idempotentPost } from '../../middlewares/idempotent-post.js';
 import { requireRole } from '../../middlewares/auth.js';
 import { validate } from '../../middlewares/validate.js';
 import {
@@ -9,7 +10,6 @@ import {
   listTasksQuerySchema,
   taskIdParamsSchema,
 } from './task.schemas.js';
-import { withTransaction } from '../../config/database.js';
 
 export function createTaskRouter({ pool, authenticate, taskService }) {
   const router = Router();
@@ -19,22 +19,15 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     '/',
     requireRole('ADMIN'),
     validate({ body: createTaskBodySchema }),
-    async (req, res) => {
-      const task = await withTransaction(
-        pool,
-        (connection) =>
-          taskService.createTask(
-            connection,
-            req.validated.body,
-            req.user.id
-          )
-      );
-
-      return res.status(201).json({
+    idempotentPost(pool, async (req, connection) => ({
+      status: 201,
+      body: {
         message: 'Task created successfully.',
-        data: { data: task },
-      });
-    }
+        data: {
+          task: await taskService.createTask(connection, req.validated.body, req.user.id),
+        },
+      },
+    })),
   );
 
   router.get(
@@ -52,40 +45,43 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     '/:idTask/assign',
     requireRole('ADMIN'),
     validate({ params: taskIdParamsSchema, body: assignTaskBodySchema }),
-    async (req, res) => {
-      const taskAssign = await taskService.assignTask(
-        pool,
-        req.validated.params.idTask,
-        req.validated.body.userIds
-      );
-
-      return res.status(200).json({
+    idempotentPost(pool, async (req, connection) => ({
+      status: 200,
+      body: {
         message: 'Users assigned successfully.',
-        data: { data: taskAssign }
-      });
-    },
+        data: {
+          task: await taskService.assignTask(
+            connection,
+            req.validated.params.idTask,
+            req.validated.body.userIds,
+          ),
+        },
+      },
+    })),
   );
 
   router.post(
     '/:idTask/complete',
     requireRole('MEMBER'),
     validate({ params: taskIdParamsSchema, body: completeTaskBodySchema }),
-    async (req, res) => {
+    idempotentPost(pool, async (req, connection) => {
       const completion = await taskService.completeTask(
-        pool,
+        connection,
         req.validated.params.idTask,
         req.user.id,
         req.validated.body.userId,
       );
-
-      return res.status(200).json({
-        message: completion.result.alreadyCompleted
-          ? 'Assignment was already completed.'
-          : 'Assignment completed successfully.',
-        data: completion.result,
+      return {
+        status: 200,
+        body: {
+          message: completion.result.alreadyCompleted
+            ? 'Assignment was already completed.'
+            : 'Assignment completed successfully.',
+          data: completion.result,
+        },
         afterCommit: completion.afterCommit,
-      });
-    }
+      };
+    }),
   );
 
   router.get(
@@ -110,7 +106,7 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
 
       await taskService.assertTaskAccess(pool, idTask, req.user);
 
-      res.status(200).json({ data: task });
+      res.status(200).json({ data: { task } });
     }),
   );
 

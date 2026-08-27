@@ -33,7 +33,6 @@ export function authenticate(pool, jwtConfig) {
 
 export function requireRole(...allowedRoles) {
   return function roleMiddleware(req, _res, next) {
-
     if (!allowedRoles.includes(req.user.role)) {
       return next(new AppError(403, 'FORBIDDEN', 'You do not have permission for this action.'));
     }

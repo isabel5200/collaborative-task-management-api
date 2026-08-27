@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export function getTestConfig() {
   const databaseName = process.env.TEST_DB_NAME || 'collaborative_task_manager_test';
   if (!databaseName.endsWith('_test')) {

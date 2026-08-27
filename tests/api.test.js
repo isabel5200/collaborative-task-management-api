@@ -216,6 +216,35 @@ describe('Collaborative Task Management API', () => {
     expect(detail.body.data.task.status).toBe('archived');
   });
 
+  it('executes a parallel MEMBER completion with the same idempotency key only once', async () => {
+    const { admin, member1 } = await demoActors();
+    const task = await createTask(admin, {
+      title: 'Idempotent member completion',
+      userIds: [member1.user.id],
+    });
+    const taskId = task.body.data.task.id;
+    const key = `member-complete-${crypto.randomUUID()}`;
+    const complete = () =>
+      request(app)
+        .post(`/tasks/${taskId}/complete`)
+        .set('Authorization', bearer(member1))
+        .set('Idempotency-Key', key)
+        .send({ userId: member1.user.id });
+
+    const [first, second] = await Promise.all([complete(), complete()]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+    expect(first.body.data.taskStatus).toBe('archived');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const history = await request(app)
+      .get(`/tasks/${taskId}/notifications`)
+      .set('Authorization', bearer(admin));
+    expect(history.body.data.notifications).toHaveLength(1);
+  });
+
   it('replays the same response for parallel POST requests with one idempotency key', async () => {
     const { admin } = await demoActors();
     const key = `parallel-${crypto.randomUUID()}`;

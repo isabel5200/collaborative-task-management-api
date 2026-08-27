@@ -12,7 +12,7 @@ El proyecto usa Node.js, JavaScript con ES Modules, Express, MySQL y SQL directo
 - Una tarea puede crearse sin asignados o con `userIds`. Solo usuarios activos con rol `MEMBER` pueden asignarse.
 - `tasks.created_by_user_id` se corrigió a `NOT NULL` en el DBML y el esquema SQL: toda tarea nace en una ruta autenticada de administrador, por lo que permitir un creador desconocido contradecía el flujo.
 - Un lote de asignación es atómico. Si incluye un usuario inválido o ya asignado, no agrega a ninguno.
-- Todos los `POST` aceptan `Idempotency-Key`. Reutilizarla con la misma ruta, actor y body reproduce la respuesta guardada; cambiar el body devuelve `409`.
+- Los `POST` que modifican estado (`/users`, `/tasks`, asignación y finalización) aceptan `Idempotency-Key`. Reutilizarla con la misma ruta, actor y body reproduce la respuesta guardada; cambiar el body devuelve `409`. El login no la necesita porque no modifica el negocio.
 - El evento lógico de archivado se crea una sola vez. HTTP no permite garantizar entrega física “exactly once”, por lo que el consumidor recibe una clave estable para deduplicar.
 - El webhook se ejecuta después del commit de archivado. Su fallo no revierte una tarea ya archivada.
 
@@ -131,7 +131,6 @@ Los ejemplos usan `jq` para extraer valores; también pueden copiarse manualment
 ```bash
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
   -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: login-admin-001' \
   -d '{"email":"admin@example.com","password":"Admin123!"}' | jq -r '.data.accessToken')
 ```
 
