@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 export function getTestConfig() {
-  const databaseName = process.env.TEST_DB_NAME || 'collaborative_task_manager_test';
+  const databaseName = process.env.TEST_DB_NAME || 'collab_task_manager_test';
   if (!databaseName.endsWith('_test')) {
     throw new Error('TEST_DB_NAME must end with _test to protect non-test databases.');
   }
@@ -18,7 +18,7 @@ export function getTestConfig() {
       connectionLimit: 10,
     },
     jwt: {
-      secret: 'test-only-secret-that-is-at-least-32-characters',
+      secret: 'a84c6c6cbea106804ebabd8445de1239310eed11fcbeacf524f6d1bb5bc789b8',
       expiresIn: '1h',
     },
     notification: {

@@ -91,7 +91,9 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
     asyncHandler(async (req, res) => {
       const notifications = await taskService.listNotifications(pool, req.validated.params.idTask);
 
-      res.status(200).json({ data: notifications });
+      res.status(200).json({
+        data: { notifications }
+      });
     }),
   );
 

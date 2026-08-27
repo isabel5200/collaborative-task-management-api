@@ -4,6 +4,7 @@ import { getTestConfig } from './test-config.js';
 
 export async function setup() {
   const config = getTestConfig();
+
   try {
     await createDatabase(config.database);
     await migrateDatabase(config.database);

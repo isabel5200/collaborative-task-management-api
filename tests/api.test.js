@@ -17,7 +17,9 @@ const { app } = createApp({
 
 async function login(email, password) {
   const response = await request(app).post('/auth/login').send({ email, password });
+
   expect(response.status).toBe(200);
+
   return { token: response.body.data.accessToken, user: response.body.data.user };
 }
 
@@ -25,6 +27,7 @@ async function demoActors() {
   const admin = await login('admin@example.com', 'Admin123!');
   const member1 = await login('member1@example.com', 'Member123!');
   const member2 = await login('member2@example.com', 'Member123!');
+
   return { admin, member1, member2 };
 }
 
@@ -47,6 +50,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   fetchMock.mockReset();
   fetchMock.mockResolvedValue({ status: 204, ok: true });
+
   await resetTestDatabase(pool, config.database);
 });
 
@@ -57,6 +61,7 @@ afterAll(async () => {
 describe('Collaborative Task Management API', () => {
   it('returns a successful health check', async () => {
     const response = await request(app).get('/health');
+
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ data: { status: 'ok' } });
   });
@@ -64,6 +69,7 @@ describe('Collaborative Task Management API', () => {
   it('logs in with valid credentials and returns the current user', async () => {
     const admin = await login('admin@example.com', 'Admin123!');
     const response = await request(app).get('/auth/me').set('Authorization', bearer(admin));
+
     expect(response.status).toBe(200);
     expect(response.body.data.user.role).toBe('ADMIN');
   });
@@ -71,6 +77,7 @@ describe('Collaborative Task Management API', () => {
   it('rejects missing and invalid access tokens', async () => {
     const missing = await request(app).get('/auth/me');
     const invalid = await request(app).get('/auth/me').set('Authorization', 'Bearer invalid');
+
     expect(missing.status).toBe(401);
     expect(invalid.status).toBe(401);
   });
@@ -81,6 +88,7 @@ describe('Collaborative Task Management API', () => {
       .post('/tasks')
       .set('Authorization', bearer(member))
       .send({ title: 'Forbidden task' });
+
     expect(response.status).toBe(403);
     expect(response.body.error.code).toBe('FORBIDDEN');
   });
@@ -98,6 +106,7 @@ describe('Collaborative Task Management API', () => {
       .post('/users')
       .set('Authorization', bearer(admin))
       .send(body);
+
     expect(created.status).toBe(201);
     expect(created.body.data.user).not.toHaveProperty('passwordHash');
 

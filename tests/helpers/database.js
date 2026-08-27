@@ -19,6 +19,7 @@ export async function resetTestDatabase(pool, databaseConfig) {
   const connection = await pool.getConnection();
   try {
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
     for (const table of tables) {
       await connection.query(`TRUNCATE TABLE \`${table}\``);
     }
