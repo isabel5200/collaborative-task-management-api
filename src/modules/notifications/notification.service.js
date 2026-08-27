@@ -8,6 +8,7 @@ function wait(milliseconds) {
 
 function safeErrorMessage(error) {
   const message = error?.name === 'AbortError' ? 'Request timed out' : 'Network request failed';
+
   return message.slice(0, 500);
 }
 
@@ -25,6 +26,7 @@ export function createNotificationService({
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+
       try {
         const response = await fetchImpl(config.url, {
           method: 'POST',
@@ -35,8 +37,10 @@ export function createNotificationService({
           body: JSON.stringify(payload),
           signal: controller.signal,
         });
+
         httpStatus = response.status;
         shouldRetry = response.status >= 500;
+
         if (!response.ok) errorMessage = `Webhook responded with HTTP ${response.status}`;
       } catch (error) {
         errorMessage = safeErrorMessage(error);
@@ -54,6 +58,7 @@ export function createNotificationService({
 
       if (httpStatus !== null && httpStatus >= 200 && httpStatus < 300) {
         await notificationRepository.markDelivered(pool, notificationId);
+
         return;
       }
 

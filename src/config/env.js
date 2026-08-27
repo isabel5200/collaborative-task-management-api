@@ -14,6 +14,7 @@ const environmentSchema = z.object({
   JWT_EXPIRES_IN: z.string().min(2).default('1h'),
   NOTIFY_URL: z.url(),
   NOTIFY_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(3000),
+  NOTIFY_RETRY_BASE_MS: z.coerce.number().int().min(10).max(10000).default(250),
   CORS_ORIGIN: z.string().min(1).default('*'),
 });
 
@@ -28,6 +29,7 @@ export function loadConfig(overrides = {}) {
   }
 
   const env = parsed.data;
+
   return {
     env: env.NODE_ENV,
     port: env.PORT,

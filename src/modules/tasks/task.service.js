@@ -115,13 +115,16 @@ export function createTaskService(notificationService) {
 
     const completedAt = await taskRepository.completeAssignment(executor, assignment.id);
     const pendingCount = await taskRepository.countPendingAssignments(executor, taskId);
+
     let notification = null;
 
     if (pendingCount === 0) {
       const archived = await taskRepository.archiveIfOpen(executor, taskId);
+
       if (archived) {
         const archivedTask = await taskRepository.findTask(executor, taskId);
         const notificationId = await taskRepository.createNotification(executor, taskId);
+
         notification = {
           id: notificationId,
           payload: {

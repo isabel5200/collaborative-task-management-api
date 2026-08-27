@@ -146,6 +146,7 @@ export async function createNotification(executor, taskId) {
     `INSERT INTO task_notifications (task_id, status) VALUES (?, 'pending')`,
     [taskId],
   );
+
   return result.insertId;
 }
 
