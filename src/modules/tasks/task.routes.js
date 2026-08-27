@@ -32,7 +32,7 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
 
       return res.status(201).json({
         message: 'Task created successfully.',
-        data: { task },
+        data: { data: task },
       });
     }
   );
@@ -61,7 +61,7 @@ export function createTaskRouter({ pool, authenticate, taskService }) {
 
       return res.status(200).json({
         message: 'Users assigned successfully.',
-        data: { taskAssign }
+        data: { data: taskAssign }
       });
     },
   );
