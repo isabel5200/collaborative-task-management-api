@@ -7,9 +7,8 @@ export const createUserBodySchema = z
     name: z.string().trim().min(1).max(80),
     lastName: z.string().trim().min(1).max(100),
     email: z
-      .string()
-      .trim()
       .email()
+      .trim()
       .max(254)
       .transform((value) => value.toLowerCase()),
     password: z.string().min(8).max(72),

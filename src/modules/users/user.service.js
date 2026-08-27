@@ -9,17 +9,20 @@ export async function createUser(executor, input) {
   if (!roleId) throw new AppError(400, 'INVALID_ROLE', 'The requested role is not available.');
 
   const passwordHash = await bcrypt.hash(input.password, 10);
+
   try {
     const user = await userRepository.create(executor, {
       ...input,
       roleId,
       passwordHash,
     });
+
     return publicUser(user);
   } catch (error) {
     if (isDuplicateEntry(error)) {
       throw new AppError(409, 'DUPLICATE_EMAIL', 'A user with this email already exists.');
     }
+
     throw error;
   }
 }
@@ -41,6 +44,7 @@ export async function listUsers(executor) {
         pendingTasks: [],
       });
     }
+
     if (row.taskId) {
       users.get(row.id).pendingTasks.push({
         id: row.taskId,

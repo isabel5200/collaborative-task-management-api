@@ -32,6 +32,7 @@ export async function create(executor, user) {
      VALUES (?, ?, ?, ?, ?)`,
     [user.roleId, user.name, user.lastName, user.email, user.passwordHash],
   );
+
   return findById(executor, result.insertId);
 }
 

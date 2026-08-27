@@ -1,28 +1,28 @@
 import { Router } from 'express';
-// import { AppError } from '../../common/errors.js';
+import { AppError } from '../../common/errors.js';
 import { asyncHandler } from '../../common/async-handler.js';
-// import { idempotentPost } from '../../middlewares/idempotent-post.js';
 import { requireRole } from '../../middlewares/auth.js';
-// import { validate } from '../../middlewares/validate.js';
-// import { createUserBodySchema, userIdParamsSchema } from './user.schemas.js';
+import { validate } from '../../middlewares/validate.js';
+import { createUserBodySchema, userIdParamsSchema } from './user.schemas.js';
 import * as userService from './user.service.js';
 
 export function createUserRouter({ pool, authenticate }) {
   const router = Router();
   router.use(authenticate);
 
-  // router.post(
-  //   '/',
-  //   requireRole('ADMIN'),
-  //   validate({ body: createUserBodySchema }),
-  //   idempotentPost(pool, async (req, connection) => ({
-  //     status: 201,
-  //     body: {
-  //       message: 'User created successfully.',
-  //       data: { user: await userService.createUser(connection, req.validated.body) },
-  //     },
-  //   })),
-  // );
+  router.post(
+    '/',
+    requireRole('ADMIN'),
+    validate({ body: createUserBodySchema }),
+    async (req, res) => {
+      const data = await userService.createUser(
+        pool,
+        req.validated.body
+      );
+
+      return res.status(201).json({ data });
+    },
+  );
 
   router.get(
     '/',

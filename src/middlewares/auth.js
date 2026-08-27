@@ -6,6 +6,7 @@ import * as userRepository from '../modules/users/user.repository.js';
 export function authenticate(pool, jwtConfig) {
   return asyncHandler(async (req, _res, next) => {
     const authorization = req.get('authorization');
+
     if (!authorization?.startsWith('Bearer ')) {
       throw new AppError(401, 'AUTHENTICATION_REQUIRED', 'A valid Bearer token is required.');
     }
@@ -32,6 +33,7 @@ export function authenticate(pool, jwtConfig) {
 
 export function requireRole(...allowedRoles) {
   return function roleMiddleware(req, _res, next) {
+
     if (!allowedRoles.includes(req.user.role)) {
       return next(new AppError(403, 'FORBIDDEN', 'You do not have permission for this action.'));
     }
