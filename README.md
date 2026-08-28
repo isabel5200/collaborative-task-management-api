@@ -4,9 +4,9 @@ API REST para crear tareas, asignarlas a múltiples usuarios, registrar la final
 
 ## Enlaces para evaluación
 
-- API desplegada: `https://collaborative-task-management-api-production.up.railway.app/`
-- Swagger/OpenAPI: `https://collaborative-task-management-api-production.up.railway.app/api/docs/#/`
-- Health check: `https://collaborative-task-management-api-production.up.railway.app/health`
+- [API desplegada](https://collaborative-task-management-api-production.up.railway.app/)
+- [Swagger/OpenAPI](https://collaborative-task-management-api-production.up.railway.app/api/docs/)
+- [Health check](https://collaborative-task-management-api-production.up.railway.app/health)
 - Modelo de datos: [database.dbml](./database.dbml)
 
 ## Ejecución local
