@@ -1,78 +1,147 @@
 # Collaborative Task Management API
 
+API REST para crear tareas, asignarlas a múltiples usuarios, registrar la finalización individual de cada miembro, archivarlas automáticamente y notificar al sistema cliente.
+
+## Enlaces para evaluación
+
+- API desplegada: `https://collaborative-task-management-api-production.up.railway.app/`
+- Swagger/OpenAPI: `https://collaborative-task-management-api-production.up.railway.app/api/docs/#/`
+- Health check: `https://collaborative-task-management-api-production.up.railway.app/health`
+- Modelo de datos: [database.dbml](./database.dbml)
+
 ## Ejecución local
 
-Requisitos: Node.js 20.19+, 22.13+ o 24+, y MySQL 8 con un usuario autorizado para crear bases de datos.
+Requisitos:
+
+- Node.js 20.19+, 22.13+ o 24+.
+- MySQL 8.
+- Un usuario de MySQL autorizado para crear bases de datos.
+
+Instala las dependencias y crea el archivo de configuración:
 
 ```powershell
 npm install
 Copy-Item .env.example .env
 ```
 
-Edita `.env` y configura `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` y `NOTIFY_URL`. El secreto JWT debe tener 32 caracteres como mínimo.
+En macOS o Linux, utiliza:
 
-Prepara la base, aplica migraciones registradas y carga los datos de demostración:
+```bash
+npm install
+cp .env.example .env
+```
 
-```powershell
+Edita `.env` y configura principalmente `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`, `NOTIFY_URL` y `TEST_DB_NAME`. El secreto JWT debe tener al menos 32 caracteres y el nombre de la base de pruebas debe terminar en `_test`.
+
+Crea la base de datos, ejecuta las migraciones y carga los usuarios de demostración:
+
+```bash
 npm run db:setup
 ```
 
-Inicia en desarrollo o en modo normal:
+Inicia la API con recarga automática durante el desarrollo:
 
-```powershell
+```bash
 npm run dev
 ```
 
-La documentación HTTP se encuentra en `http://localhost:3000/api/docs`. El health check está en `http://localhost:3000/health`.
+O en modo normal:
 
-Credenciales locales creadas por el seed:
+```bash
+npm start
+```
 
-- `admin@example.com` / `Admin123!`
-- `member1@example.com` / `Member123!`
-- `member2@example.com` / `Member123!`
+La documentación local se encuentra en `http://localhost:3000/api/docs` y el health check en `http://localhost:3000/health`.
 
-Para observar localmente las notificaciones, configura `NOTIFY_URL=http://127.0.0.1:4000/webhooks/tasks` y ejecuta en otra terminal:
+### Credenciales de evaluación
 
-```powershell
+Estas cuentas son exclusivamente para revisar el proyecto:
+
+- **ADMIN:** `admin@example.com` / `Admin123!`
+- **MEMBER:** `member1@example.com` / `Member123!`
+- **MEMBER:** `member2@example.com` / `Member123!`
+
+Para probar una ruta protegida, inicia sesión mediante `POST /auth/login`. En Swagger, copia `data.accessToken`, presiona **Authorize** y pega el token.
+
+### Notificaciones locales
+
+Configura:
+
+```env
+NOTIFY_URL=http://127.0.0.1:4000/webhooks/tasks
+```
+
+Después ejecuta el receptor simulado en otra terminal:
+
+```bash
 npm run webhook:mock
 ```
 
-Validaciones:
+### Pruebas y calidad
 
-```powershell
+```bash
 npm test
 npm run lint
 npm run format:check
 ```
 
-Las pruebas utilizan `TEST_DB_NAME`, cuyo nombre debe terminar en `_test`; nunca reutilizan la base principal.
+Las pruebas crean y migran automáticamente la base indicada en `TEST_DB_NAME`; nunca utilizan la base de desarrollo.
 
-## Decisiones técnicas justificadas
+## Autenticación e idempotencia
 
-- JavaScript moderno con ES Modules evita compilación y mantiene el proyecto fácil de revisar.
-- Express, MySQL y `mysql2/promise` ofrecen una implementación directa sin ORM. 
-- Zod para la validación del entorno y de la entrada HTTP;
-- La lógica de negocio vive en servicios y el SQL en repositorios. 
-- Crear usuarios, crear tareas, asignar y completar requieren `Idempotency-Key` porque modifican estado. Login no usa idempotencia porque no altera datos de negocio.
-- La finalización bloquea la tarea con `SELECT ... FOR UPDATE`, modifica solo la asignación autenticada y archiva mediante una transición condicional. El webhook se ejecuta después del commit.
-- Cada tarea genera un único evento lógico de archivado. Los intentos HTTP se registran y usan una clave estable.
+Las rutas protegidas requieren:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Los siguientes endpoints también requieren el header `Idempotency-Key` porque modifican información:
+
+- `POST /users`
+- `POST /tasks`
+- `POST /tasks/{idTask}/assign`
+- `POST /tasks/{idTask}/complete`
+
+Ejemplo:
+
+```http
+Idempotency-Key: create-task-550e8400-e29b-41d4-a716-446655440000
+```
+
+Cada operación nueva debe utilizar una clave diferente. Si el cliente reintenta exactamente la misma operación, debe reutilizar la clave original; la API reproducirá la respuesta almacenada sin ejecutar nuevamente la operación.
+
+Si falta el header, la API responde `400 IDEMPOTENCY_KEY_REQUIRED`. Si una misma clave se reutiliza en la misma ruta con un body diferente, responde `409 IDEMPOTENCY_CONFLICT`. Login y las peticiones GET no requieren idempotencia. Swagger muestra este header como obligatorio en los endpoints correspondientes.
+
+## Decisiones técnicas importantes
+
+- Se utilizó JavaScript con ES Modules para evitar una etapa de compilación y facilitar la revisión.
+- Express, MySQL y `mysql2/promise` permiten una implementación directa con SQL explícito, sin depender de un ORM.
+- Zod realiza la validación de variables de entorno, parámetros y cuerpos HTTP.
+- La lógica de negocio se separó en servicios y el acceso SQL en repositorios.
+- JWT identifica al usuario y el control de roles limita las operaciones de `ADMIN` y `MEMBER`.
+- La finalización utiliza una transacción y `SELECT ... FOR UPDATE` para proteger la tarea ante completaciones simultáneas.
+- El webhook se ejecuta después del commit para evitar notificar un archivado que no fue confirmado.
+- Cada tarea genera un solo evento lógico de archivado; sus diferentes intentos HTTP quedan registrados y utilizan una clave estable.
 
 ## Supuestos ante ambigüedades
 
-- Solo usuarios activos con rol `MEMBER` pueden recibir tareas; `ADMIN` administra y no completa asignaciones.
-- Una tarea puede crearse sin asignados o con una lista no vacía de `userIds`.
-- Un lote de asignación es atómico: cualquier usuario inválido o duplicado rechaza el lote completo.
+- Solo usuarios activos con rol `MEMBER` pueden recibir tareas.
+- Los administradores gestionan el sistema, pero no reciben ni completan asignaciones.
+- Los títulos de las tareas no son únicos; su identificador es el campo `id`.
+- Una tarea puede crearse sin usuarios y permanecerá abierta hasta recibir asignaciones.
+- Un lote de asignación es atómico: un usuario inválido o duplicado rechaza el lote completo.
 - Una asignación completada y una tarea archivada no pueden reabrirse.
-- `tasks.created_by_user_id` es obligatorio porque toda creación exige un administrador autenticado.
-- Los errores del webhook no revierten el archivado. Se reintentan timeouts, errores de red y respuestas 5xx hasta tres veces;
+- Los errores del webhook no revierten el archivado. Los timeouts, errores de red y respuestas 5xx se reintentan hasta tres veces.
 
 ## Funcionalidades recortadas por tiempo
 
 - Refresh tokens, recuperación de contraseña, verificación de correo y OAuth.
-- Eliminación, reasignación, reapertura, paginación y permisos dinámicos.
-- Cola externa o worker persistente para reintentos posteriores a la petición.
-- Recuperación automática del pequeño intervalo entre el commit y el primer intento del webhook.
-- Docker, CI/CD..
+- Edición, eliminación, reasignación y reapertura de tareas.
+- Paginación y filtros avanzados.
+- Cola externa o worker persistente para reanudar notificaciones después de reinicios.
+- Pipeline propio de CI/CD.
+- Cierre de sesión del usuario.
 
-## Funcionalidad extra
- Se añadieron roles de usuario como `MEMBER` y `ADMIN`, esto para que hubiera más control a la hora de crear y el alcance de información que puede visualizar cada usuario. Esta mejora me pareció más viable, sobre todo si el sistema está enfocado para empresas, siempre habrá un líder de área y sus empleados.
+## Funcionalidad adicional
+
+Se añadió control de acceso basado en los roles `ADMIN` y `MEMBER`. Un administrador puede gestionar usuarios, crear y asignar tareas, consultar información global y revisar notificaciones. Un miembro únicamente puede consultar sus propias asignaciones y completar su participación. Esto aplica el principio de menor privilegio y evita que un usuario modifique información ajena.
