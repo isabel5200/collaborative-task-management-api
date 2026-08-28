@@ -145,3 +145,14 @@ Si falta el header, la API responde `400 IDEMPOTENCY_KEY_REQUIRED`. Si una misma
 ## Funcionalidad adicional
 
 Se añadió control de acceso basado en los roles `ADMIN` y `MEMBER`. Un administrador puede gestionar usuarios, crear y asignar tareas, consultar información global y revisar notificaciones. Un miembro únicamente puede consultar sus propias asignaciones y completar su participación. Esto aplica el principio de menor privilegio y evita que un usuario modifique información ajena.
+
+## Despliegue
+
+Elegí Railway porque permite integrar el repositorio de GitHub, administrar las
+variables de entorno, provisionar MySQL y publicar la API mediante HTTPS sin
+configurar manualmente un servidor. Además, sus referencias internas permiten
+conectar la API con MySQL sin colocar las credenciales directamente en el código.
+
+Las migraciones se ejecutan antes del despliegue mediante `npm run db:migrate` y
+la aplicación inicia con `npm start`. La integración con GitHub facilita actualizar
+el servicio cuando se publica una nueva versión del proyecto.
