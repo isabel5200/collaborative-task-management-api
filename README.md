@@ -73,3 +73,6 @@ Las pruebas utilizan `TEST_DB_NAME`, cuyo nombre debe terminar en `_test`; nunca
 - Cola externa o worker persistente para reintentos posteriores a la petición.
 - Recuperación automática del pequeño intervalo entre el commit y el primer intento del webhook.
 - Docker, CI/CD..
+
+## Funcionalidad extra
+ Se añadieron roles de usuario como `MEMBER` y `ADMIN`, esto para que hubiera más control a la hora de crear y el alcance de información que puede visualizar cada usuario. Esta mejora me pareció más viable, sobre todo si el sistema está enfocado para empresas, siempre habrá un líder de área y sus empleados.
